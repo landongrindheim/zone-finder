@@ -2,3 +2,5 @@
 zone-finder
 *.exe
 *.test
+
+coverage.out
