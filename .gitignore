@@ -1,0 +1,4 @@
+# binaries
+zone-finder
+*.exe
+*.test
