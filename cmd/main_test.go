@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 	"zone-finder/zones"
@@ -24,23 +25,23 @@ func TestFormatOutput(t *testing.T) {
 
 	// Check for LTHR in output
 	if !strings.Contains(output, "LTHR: 172") {
-		t.Error("Output should contain LTHR value")
+		t.Error("Expected output to contain LTHR value")
 	}
 
 	// Check for zone information
 	if !strings.Contains(output, "Zone 1") {
-		t.Error("Output should contain Zone 1")
+		t.Error("Expected output to contain Zone 1")
 	}
 
 	if !strings.Contains(output, "0-137") {
-		t.Error("Output should contain Zone 1 range")
+		t.Error("Expected output to contain Zone 1 range")
 	}
 
 	// Check for all 5 zones
 	for i := 1; i <= 5; i++ {
-		zoneName := "Zone " + string(rune('0'+i))
+		zoneName := fmt.Sprintf("Zone %d", i)
 		if !strings.Contains(output, zoneName) {
-			t.Errorf("Output should contain %s", zoneName)
+			t.Errorf("Expected output to contain %s", zoneName)
 		}
 	}
 }
@@ -67,11 +68,11 @@ func TestFormatOutput_Structure(t *testing.T) {
 
 	// Check LTHR formatting includes "bpm"
 	if !strings.Contains(output, "bpm") {
-		t.Error("Output should include 'bpm' units")
+		t.Error("Expected output to include 'bpm' units")
 	}
 }
 
-func TestValidateArgs(t *testing.T) {
+func TestValidateArgs_ValidatesArgumentCount(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    []string
@@ -104,56 +105,189 @@ func TestValidateArgs(t *testing.T) {
 	}
 }
 
-func TestRun_InvalidFile(t *testing.T) {
-	var stdout, stderr bytes.Buffer
-
-	exitCode := run([]string{"zone-finder", "nonexistent.tcx"}, &stdout, &stderr)
-
-	// Should exit with error code
-	if exitCode == 0 {
-		t.Error("Expected non-zero exit code for invalid file")
+func TestRun(t *testing.T) {
+	tests := []struct {
+		name         string
+		args         []string
+		wantExitCode int
+		wantStdout   bool
+		wantStderr   bool
+	}{
+		{
+			name:         "valid file",
+			args:         []string{"zone-finder", "../parser/testdata/outside_run_armband.tcx"},
+			wantExitCode: 0,
+			wantStdout:   true,
+			wantStderr:   false,
+		},
+		{
+			name:         "invalid file",
+			args:         []string{"zone-finder", "nonexistent.tcx"},
+			wantExitCode: 1,
+			wantStdout:   false,
+			wantStderr:   true,
+		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			exitCode := run(tt.args, &stdout, &stderr)
 
-	// Should write error to stderr
-	if stderr.Len() == 0 {
-		t.Error("Expected error message in stderr")
-	}
+			// Should exit with correct code
+			if exitCode != tt.wantExitCode {
+				t.Errorf("Expected exit code %v, got: %v", tt.wantExitCode, exitCode)
+			}
 
-	// Should not write to stdout
-	if stdout.Len() > 0 {
-		t.Error("Expected no output to stdout on error")
+			if tt.wantStdout && stdout.Len() == 0 {
+				t.Error("Expected message in stdout")
+			}
+
+			if !tt.wantStdout && stdout.Len() > 0 {
+				t.Errorf("Expected no output to stdout, got %s", stdout.String())
+			}
+
+			if tt.wantStderr && stderr.Len() == 0 {
+				t.Error("Expected error message in stderr")
+			}
+
+			if !tt.wantStderr && stderr.Len() > 0 {
+				t.Errorf("Expected no stderr, got %s", stderr.String())
+			}
+
+			if tt.wantExitCode == 0 {
+				output := stdout.String()
+				if !strings.Contains(output, "LTHR") {
+					t.Error("Expected output to contain LTHR")
+				}
+
+				if !strings.Contains(output, "Zone") {
+					t.Error("Expected output to contain zone information")
+				}
+			}
+		})
 	}
 }
 
-func TestRun_ValidFile(t *testing.T) {
+func TestShowUsage(t *testing.T) {
+	var stdout bytes.Buffer
+
+	showUsage(&stdout)
+
+	output := stdout.String()
+
+	// Should contain program name
+	if !strings.Contains(output, "zone-finder") {
+		t.Error("Expected usage to contain program name")
+	}
+
+	// Should explain what arguments to provide
+	if !strings.Contains(output, "file") || !strings.Contains(output, ".tcx") {
+		t.Error("Expected usage to mention TCX file argument")
+	}
+
+	// Should contain "Usage:" header
+	if !strings.Contains(output, "Usage:") {
+		t.Error("Expected usage to contain 'Usage:' header")
+	}
+
+	// Should have examples section (optional but nice)
+	if !strings.Contains(output, "Example") {
+		t.Log("Consider adding examples to usage message")
+	}
+}
+
+func TestRun_HelpFlag(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{
+			name: "short help flag",
+			args: []string{"zone-finder", "-h"},
+		},
+		{
+			name: "long help flag",
+			args: []string{"zone-finder", "--help"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+
+			exitCode := run(tt.args, &stdout, &stderr)
+
+			// Should exit successfully (help is not an error)
+			if exitCode != 0 {
+				t.Errorf("Expected exit code 0 for help, got %d", exitCode)
+			}
+
+			// Should write usage to stdout
+			if stdout.Len() == 0 {
+				t.Error("Expected usage message in stdout")
+			}
+
+			// Should contain usage information
+			output := stdout.String()
+			if !strings.Contains(output, "Usage:") {
+				t.Error("Help output expected usage information")
+			}
+
+			// Should not write to stderr (help is not an error)
+			if stderr.Len() > 0 {
+				t.Errorf("Expected no error output for help, got: %s", stderr.String())
+			}
+		})
+	}
+}
+
+func TestRun_NoArgs_ShowsUsage(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 
-	// This test would use a real test file
-	// For now, we're just defining the expected behavior
-	exitCode := run([]string{"zone-finder", "../parser/testdata/outside_run_armband.tcx"}, &stdout, &stderr)
+	exitCode := run([]string{"zone-finder"}, &stdout, &stderr)
 
-	// Should exit successfully
-	if exitCode != 0 {
-		t.Errorf("Expected exit code 0, got %d. Stderr: %s", exitCode, stderr.String())
+	// Should exit with error code (missing required argument)
+	if exitCode == 0 {
+		t.Error("Expected non-zero exit code when no file provided")
 	}
 
-	// Should write output to stdout
-	if stdout.Len() == 0 {
-		t.Error("Expected output to stdout")
+	// Should show usage message to help user
+	output := stderr.String()
+	if !strings.Contains(output, "Usage:") && !strings.Contains(output, "zone-finder") {
+		t.Error("Error output expected to include usage hint")
+	}
+}
+
+func TestValidateArgs_HelpFlags(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []string
+		isHelpFlag bool
+	}{
+		{
+			name:       "help short flag",
+			args:       []string{"program", "-h"},
+			isHelpFlag: true,
+		},
+		{
+			name:       "help long flag",
+			args:       []string{"program", "--help"},
+			isHelpFlag: true,
+		},
+		{
+			name:       "regular file",
+			args:       []string{"program", "file.tcx"},
+			isHelpFlag: false,
+		},
 	}
 
-	// Should contain zone information
-	output := stdout.String()
-	if !strings.Contains(output, "LTHR") {
-		t.Error("Output should contain LTHR")
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			isHelp := checkHelpFlag(tt.args)
 
-	if !strings.Contains(output, "Zone") {
-		t.Error("Output should contain zone information")
-	}
-
-	// Should not write errors to stderr
-	if stderr.Len() > 0 {
-		t.Errorf("Expected no errors, got: %s", stderr.String())
+			if isHelp != tt.isHelpFlag {
+				t.Errorf("checkHelpFlag() isHelp = %v, want %v", isHelp, tt.isHelpFlag)
+			}
+		})
 	}
 }

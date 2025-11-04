@@ -39,7 +39,7 @@ func main() {
 
 func validateArgs(args []string) error {
 	if len(args) == 1 {
-		return errors.New("you'll need to provide a filename")
+		return errors.New("missing required argument: file path")
 	} else if len(args) > 2 {
 		return errors.New("we're only able to handle a single file at a time")
 	}
@@ -47,10 +47,51 @@ func validateArgs(args []string) error {
 	return nil
 }
 
+func showUsage(w io.Writer) {
+	usage := `
+Usage: zone-finder <file.tcx>
+
+Calculate heart rate training zones from TCX workout files using the
+Lactate Threshold Heart Rate (LTHR) method.
+
+Arguments:
+  <file.tcx>    Path to a TCX workout file
+
+Options:
+  -h, --help    Show this help message
+
+Examples:
+  zone-finder workout.tcx
+  zone-finder ~/Documents/garmin-run.tcx
+
+The program analyzes the last 20 minutes of your workout to determine
+your LTHR, then calculates 5 training zones based on percentages of LTHR.
+`
+
+	fmt.Fprint(w, usage)
+}
+
+func checkHelpFlag(args []string) bool {
+	if len(args) < 2 {
+		return false
+	}
+
+	arg := args[1]
+	if arg == "-h" || arg == "--help" {
+		return true
+	}
+
+	return false
+}
+
 func run(args []string, stdout io.Writer, stderr io.Writer) int {
-	err := validateArgs(args)
-	if err != nil {
-		fmt.Fprint(stderr, err)
+	if isHelp := checkHelpFlag(args); isHelp {
+		showUsage(stdout)
+		return 0
+	}
+
+	if err := validateArgs(args); err != nil {
+		showUsage(stderr)
 		return 1
 	}
 
