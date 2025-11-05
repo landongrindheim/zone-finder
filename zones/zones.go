@@ -26,8 +26,8 @@ const (
 	zone3Upper   float64 = 0.94
 )
 
-func CalculateZonesFromHRData(datapoints []parser.HRDataPoint) (HeartRateZones, error) {
-	sorted := sortByTimestamp(datapoints)
+func CalculateZonesFromHRData(dataPoints []parser.HRDataPoint) (HeartRateZones, error) {
+	sorted := sortByTimestamp(dataPoints)
 
 	lactateThreshold, err := CalculateLTHR(sorted)
 	if err != nil {
@@ -39,10 +39,10 @@ func CalculateZonesFromHRData(datapoints []parser.HRDataPoint) (HeartRateZones, 
 	return zones, nil
 }
 
-func sortByTimestamp(datapoints []parser.HRDataPoint) []parser.HRDataPoint {
-	sort.Slice(datapoints, func(i, j int) bool { return datapoints[i].Timestamp.Before(datapoints[j].Timestamp) })
+func sortByTimestamp(dataPoints []parser.HRDataPoint) []parser.HRDataPoint {
+	sort.Slice(dataPoints, func(i, j int) bool { return dataPoints[i].Timestamp.Before(dataPoints[j].Timestamp) })
 
-	return datapoints
+	return dataPoints
 }
 
 func CalculateLTHR(dataPoints []parser.HRDataPoint) (int, error) {
@@ -62,19 +62,19 @@ func CalculateLTHR(dataPoints []parser.HRDataPoint) (int, error) {
 	return lactateThreshold, nil
 }
 
-func lastTwentyMinutes(datapoints []parser.HRDataPoint) []parser.HRDataPoint {
-	var lastDataPoints []parser.HRDataPoint
+func lastTwentyMinutes(dataPoints []parser.HRDataPoint) []parser.HRDataPoint {
+	var lastdataPoints []parser.HRDataPoint
 
-	lastTimestamp := datapoints[len(datapoints)-1].Timestamp
+	lastTimestamp := dataPoints[len(dataPoints)-1].Timestamp
 	twentyMinutesPrior := lastTimestamp.Add(-20 * time.Minute)
 
-	for _, dp := range datapoints {
+	for _, dp := range dataPoints {
 		if !dp.Timestamp.Before(twentyMinutesPrior) {
-			lastDataPoints = append(lastDataPoints, dp)
+			lastdataPoints = append(lastdataPoints, dp)
 		}
 	}
 
-	return lastDataPoints
+	return lastdataPoints
 }
 
 func CalculateZones(lthr int) HeartRateZones {
