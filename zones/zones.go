@@ -63,18 +63,18 @@ func CalculateLTHR(dataPoints []types.HRDataPoint) (int, error) {
 }
 
 func lastTwentyMinutes(dataPoints []types.HRDataPoint) []types.HRDataPoint {
-	var lastdataPoints []types.HRDataPoint
+	var lastDataPoints []types.HRDataPoint
 
 	lastTimestamp := dataPoints[len(dataPoints)-1].Timestamp
 	twentyMinutesPrior := lastTimestamp.Add(-20 * time.Minute)
 
 	for _, dp := range dataPoints {
 		if !dp.Timestamp.Before(twentyMinutesPrior) {
-			lastdataPoints = append(lastdataPoints, dp)
+			lastDataPoints = append(lastDataPoints, dp)
 		}
 	}
 
-	return lastdataPoints
+	return lastDataPoints
 }
 
 func CalculateZones(lthr int) HeartRateZones {
