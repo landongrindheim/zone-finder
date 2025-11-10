@@ -159,7 +159,7 @@ func TestGetDeviceInfo(t *testing.T) {
 
 func TestParseFIT_ValidatesFileFormat(t *testing.T) {
 	// Try parsing a TCX file as FIT - should fail gracefully
-	_, err := ParseFIT("../parser/testdata/treadmill_run_watch.tcx")
+	_, err := ParseFIT("../tcx/testdata/treadmill_run_watch.tcx")
 	if err == nil {
 		t.Error("expected error when parsing TCX file as FIT")
 	}
