@@ -82,11 +82,11 @@ func (fit *FITData) GetDeviceName() string {
 	}
 
 	manufacturer := fit.deviceInfo.Manufacturer.String()
-	if manufacturer == "garmin" {
-		return typedef.GarminProduct(fit.deviceInfo.Product).String()
+	if manufacturer != "garmin" {
+		return manufacturer
 	}
 
-	return manufacturer
+	return typedef.GarminProduct(fit.deviceInfo.Product).String()
 }
 
 func (fit *FITData) GetProductID() int {
