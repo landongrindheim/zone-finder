@@ -98,19 +98,19 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 	workoutFile := args[1]
 	workout, err := workoutfile.ParseFile(workoutFile)
 	if err != nil {
-		fmt.Fprintf(stderr, "Error parsing file: %v\n", err)
+		fmt.Fprintf(stderr, "failed to parse workout file: %v\n", err)
 		return 1
 	}
 
 	hrData, err := workout.GetHRDataPoints()
 	if err != nil {
-		fmt.Fprintf(stderr, "Error parsing heart rate data: %v\n", err)
+		fmt.Fprintf(stderr, "failed to process heart rate data: %v\n", err)
 		return 1
 	}
 
 	zones, err := zones.CalculateZonesFromHRData(hrData)
 	if err != nil {
-		fmt.Fprintf(stderr, "Error calculating zones: %v\n", err)
+		fmt.Fprintf(stderr, "failed to calculate zones: %v\n", err)
 		return 1
 	}
 
