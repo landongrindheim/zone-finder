@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"zone-finder/parser"
+	"zone-finder/tcx"
 	"zone-finder/zones"
 )
 
@@ -96,7 +96,7 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 	}
 
 	tcxFile := args[1]
-	tcxData, err := parser.ParseTCX(tcxFile)
+	tcxData, err := tcx.ParseTCX(tcxFile)
 	if err != nil {
 		fmt.Fprint(stderr, err)
 		return 1

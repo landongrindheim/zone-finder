@@ -115,7 +115,7 @@ func TestRun(t *testing.T) {
 	}{
 		{
 			name:         "valid file",
-			args:         []string{"zone-finder", "../parser/testdata/outside_run_armband.tcx"},
+			args:         []string{"zone-finder", "../tcx/testdata/outside_run_armband.tcx"},
 			wantExitCode: 0,
 			wantStdout:   true,
 			wantStderr:   false,
