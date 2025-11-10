@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"os"
 	"time"
+	"zone-finder/workoutfile"
 )
 
 type TCXData struct {
@@ -39,11 +40,6 @@ type HeartRateBpm struct {
 	Value int `xml:"Value"`
 }
 
-type HRDataPoint struct {
-	Timestamp time.Time
-	HeartRate int
-}
-
 type Creator struct {
 	XMLName   xml.Name `xml:"Creator"`
 	Name      string   `xml:"Name"`
@@ -74,8 +70,8 @@ func (tcx *TCXData) GetProductID() int {
 	return tcx.Activities.Activity.Creator.ProductId
 }
 
-func (tcx *TCXData) GetHRDataPoints() ([]HRDataPoint, error) {
-	var dataPoints []HRDataPoint
+func (tcx *TCXData) GetHRDataPoints() ([]workoutfile.HRDataPoint, error) {
+	var dataPoints []workoutfile.HRDataPoint
 
 	for _, lap := range tcx.Activities.Activity.Laps {
 		for _, track := range lap.Tracks {
@@ -87,7 +83,7 @@ func (tcx *TCXData) GetHRDataPoints() ([]HRDataPoint, error) {
 				}
 
 				dataPoints = append(dataPoints,
-					HRDataPoint{
+					workoutfile.HRDataPoint{
 						Timestamp: trackpoint.Time,
 						HeartRate: trackpoint.HeartRateBpm.Value,
 					},

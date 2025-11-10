@@ -4,16 +4,16 @@ import (
 	"testing"
 	"time"
 
-	"zone-finder/tcx"
+	"zone-finder/workoutfile"
 )
 
 func TestGetLastNMinutes(t *testing.T) {
 	// Create 40 minutes of data
-	dataPoints := []tcx.HRDataPoint{}
+	dataPoints := []workoutfile.HRDataPoint{}
 	baseTime := time.Date(2025, 10, 28, 18, 0, 0, 0, time.UTC)
 
 	for i := 0; i < 2400; i++ { // 2400 seconds = 40 minutes
-		dataPoints = append(dataPoints, tcx.HRDataPoint{
+		dataPoints = append(dataPoints, workoutfile.HRDataPoint{
 			Timestamp: baseTime.Add(time.Duration(i) * time.Second),
 			HeartRate: 150 + i/100, // HR gradually increases
 		})
@@ -43,13 +43,13 @@ func TestGetLastNMinutes(t *testing.T) {
 func TestCalculateLTHR(t *testing.T) {
 	// Create synthetic HR data for a 30-minute workout
 	// Simulating a time trial where HR builds and stabilizes
-	dataPoints := []tcx.HRDataPoint{}
+	dataPoints := []workoutfile.HRDataPoint{}
 	baseTime := time.Date(2025, 10, 28, 18, 0, 0, 0, time.UTC)
 
 	// First 10 minutes: HR builds from 140 to 165
 	for i := 0; i < 600; i++ { // 600 seconds = 10 minutes
 		hr := 140 + (i / 24) // gradually increases
-		dataPoints = append(dataPoints, tcx.HRDataPoint{
+		dataPoints = append(dataPoints, workoutfile.HRDataPoint{
 			Timestamp: baseTime.Add(time.Duration(i) * time.Second),
 			HeartRate: hr,
 		})
@@ -58,7 +58,7 @@ func TestCalculateLTHR(t *testing.T) {
 	// Last 20 minutes: HR stabilizes around 170-172 (this is our LTHR)
 	for i := 600; i < 1800; i++ { // 1200 seconds = 20 minutes
 		hr := 170 + (i % 3) // oscillates 170, 171, 172
-		dataPoints = append(dataPoints, tcx.HRDataPoint{
+		dataPoints = append(dataPoints, workoutfile.HRDataPoint{
 			Timestamp: baseTime.Add(time.Duration(i) * time.Second),
 			HeartRate: hr,
 		})
@@ -77,7 +77,7 @@ func TestCalculateLTHR(t *testing.T) {
 
 func TestCalculateLTHR_InsufficientData(t *testing.T) {
 	// Less than 20 minutes of data
-	dataPoints := []tcx.HRDataPoint{
+	dataPoints := []workoutfile.HRDataPoint{
 		{Timestamp: time.Now(), HeartRate: 150},
 		{Timestamp: time.Now().Add(1 * time.Minute), HeartRate: 155},
 	}
@@ -200,13 +200,13 @@ func TestCalculateZones(t *testing.T) {
 
 func TestCalculateZonesFromData(t *testing.T) {
 	// Integration test: from data points to zones
-	dataPoints := []tcx.HRDataPoint{}
+	dataPoints := []workoutfile.HRDataPoint{}
 	baseTime := time.Date(2025, 10, 28, 18, 0, 0, 0, time.UTC)
 
 	// Create 30 minutes of data with LTHR around 170
 	for i := 0; i < 600; i++ {
 		hr := 140 + (i / 24)
-		dataPoints = append(dataPoints, tcx.HRDataPoint{
+		dataPoints = append(dataPoints, workoutfile.HRDataPoint{
 			Timestamp: baseTime.Add(time.Duration(i) * time.Second),
 			HeartRate: hr,
 		})
@@ -214,7 +214,7 @@ func TestCalculateZonesFromData(t *testing.T) {
 
 	for i := 600; i < 1800; i++ {
 		hr := 170 + (i % 3)
-		dataPoints = append(dataPoints, tcx.HRDataPoint{
+		dataPoints = append(dataPoints, workoutfile.HRDataPoint{
 			Timestamp: baseTime.Add(time.Duration(i) * time.Second),
 			HeartRate: hr,
 		})

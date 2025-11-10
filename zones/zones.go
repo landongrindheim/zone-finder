@@ -5,7 +5,7 @@ import (
 	"math"
 	"sort"
 	"time"
-	"zone-finder/tcx"
+	"zone-finder/workoutfile"
 )
 
 type HeartRateZones struct {
@@ -26,7 +26,7 @@ const (
 	zone3Upper   float64 = 0.94
 )
 
-func CalculateZonesFromHRData(dataPoints []tcx.HRDataPoint) (HeartRateZones, error) {
+func CalculateZonesFromHRData(dataPoints []workoutfile.HRDataPoint) (HeartRateZones, error) {
 	sorted := sortByTimestamp(dataPoints)
 
 	lactateThreshold, err := CalculateLTHR(sorted)
@@ -39,13 +39,13 @@ func CalculateZonesFromHRData(dataPoints []tcx.HRDataPoint) (HeartRateZones, err
 	return zones, nil
 }
 
-func sortByTimestamp(dataPoints []tcx.HRDataPoint) []tcx.HRDataPoint {
+func sortByTimestamp(dataPoints []workoutfile.HRDataPoint) []workoutfile.HRDataPoint {
 	sort.Slice(dataPoints, func(i, j int) bool { return dataPoints[i].Timestamp.Before(dataPoints[j].Timestamp) })
 
 	return dataPoints
 }
 
-func CalculateLTHR(dataPoints []tcx.HRDataPoint) (int, error) {
+func CalculateLTHR(dataPoints []workoutfile.HRDataPoint) (int, error) {
 	totalDuration := dataPoints[len(dataPoints)-1].Timestamp.Sub(dataPoints[0].Timestamp)
 	if totalDuration < 20*time.Minute {
 		return 0, errors.New("insufficient data: need at least 20 minutes")
@@ -62,8 +62,8 @@ func CalculateLTHR(dataPoints []tcx.HRDataPoint) (int, error) {
 	return lactateThreshold, nil
 }
 
-func lastTwentyMinutes(dataPoints []tcx.HRDataPoint) []tcx.HRDataPoint {
-	var lastdataPoints []tcx.HRDataPoint
+func lastTwentyMinutes(dataPoints []workoutfile.HRDataPoint) []workoutfile.HRDataPoint {
+	var lastdataPoints []workoutfile.HRDataPoint
 
 	lastTimestamp := dataPoints[len(dataPoints)-1].Timestamp
 	twentyMinutesPrior := lastTimestamp.Add(-20 * time.Minute)
