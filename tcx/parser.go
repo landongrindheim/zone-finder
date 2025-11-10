@@ -8,42 +8,41 @@ import (
 )
 
 type TCXData struct {
-	Activities Activities `xml:"Activities"`
+	Activities activities `xml:"Activities"`
 }
 
-type Activities struct {
-	Activity Activity `xml:"Activity"`
+type activities struct {
+	Activity activity `xml:"Activity"`
 }
 
-type Activity struct {
+type activity struct {
 	Sport   string  `xml:"Sport,attr"`
 	Id      string  `xml:"Id"`
-	Laps    []Lap   `xml:"Lap"`
-	Creator Creator `xml:"Creator"`
+	Laps    []lap   `xml:"Lap"`
+	Creator creator `xml:"Creator"`
 }
 
-type Lap struct {
+type lap struct {
 	StartTime string  `xml:"StartTime,attr"`
-	Tracks    []Track `xml:"Track"`
+	Tracks    []track `xml:"Track"`
 }
 
-type Track struct {
-	Trackpoints []Trackpoint `xml:"Trackpoint"`
+type track struct {
+	Trackpoints []trackpoint `xml:"Trackpoint"`
 }
 
-type Trackpoint struct {
+type trackpoint struct {
 	Time         time.Time    `xml:"Time"`
-	HeartRateBpm HeartRateBpm `xml:"HeartRateBpm"`
+	HeartRateBpm heartRateBpm `xml:"HeartRateBpm"`
 }
 
-type HeartRateBpm struct {
+type heartRateBpm struct {
 	Value int `xml:"Value"`
 }
 
-type Creator struct {
-	XMLName   xml.Name `xml:"Creator"`
-	Name      string   `xml:"Name"`
-	ProductId int      `xml:"ProductID"`
+type creator struct {
+	Name      string `xml:"Name"`
+	ProductId int    `xml:"ProductID"`
 }
 
 func ParseTCX(filepath string) (*TCXData, error) {
