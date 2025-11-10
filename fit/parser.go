@@ -3,7 +3,7 @@ package fit
 import (
 	"os"
 	"strings"
-	"zone-finder/workoutfile"
+	"zone-finder/types"
 
 	"github.com/muktihari/fit/decoder"
 	"github.com/muktihari/fit/profile/mesgdef"
@@ -58,8 +58,8 @@ func isValidDeviceInfo(deviceInfo *mesgdef.DeviceInfo) bool {
 	return manufacturer != "" && !strings.Contains(manufacturer, "Invalid")
 }
 
-func (fit *FITData) GetHRDataPoints() ([]workoutfile.HRDataPoint, error) {
-	var dataPoints []workoutfile.HRDataPoint
+func (fit *FITData) GetHRDataPoints() ([]types.HRDataPoint, error) {
+	var dataPoints []types.HRDataPoint
 
 	for _, msg := range fit.messages {
 		record := mesgdef.NewRecord(&msg)
@@ -67,7 +67,7 @@ func (fit *FITData) GetHRDataPoints() ([]workoutfile.HRDataPoint, error) {
 			continue
 		}
 
-		dataPoints = append(dataPoints, workoutfile.HRDataPoint{
+		dataPoints = append(dataPoints, types.HRDataPoint{
 			Timestamp: record.Timestamp,
 			HeartRate: int(record.HeartRate),
 		})

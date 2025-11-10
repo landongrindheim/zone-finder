@@ -1,7 +1,9 @@
 package workoutfile
 
+import "zone-finder/types"
+
 type WorkoutFile interface {
-	GetHRDataPoints() ([]HRDataPoint, error)
+	GetHRDataPoints() ([]types.HRDataPoint, error)
 	GetDeviceName() string
 	GetProductID() int
 }

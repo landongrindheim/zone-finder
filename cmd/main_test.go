@@ -114,8 +114,15 @@ func TestRun(t *testing.T) {
 		wantStderr   bool
 	}{
 		{
-			name:         "valid file",
+			name:         "valid TCX file",
 			args:         []string{"zone-finder", "../tcx/testdata/outside_run_armband.tcx"},
+			wantExitCode: 0,
+			wantStdout:   true,
+			wantStderr:   false,
+		},
+		{
+			name:         "valid FIT file",
+			args:         []string{"zone-finder", "../fit/testdata/treadmill_run_watch.fit"},
 			wantExitCode: 0,
 			wantStdout:   true,
 			wantStderr:   false,
@@ -181,8 +188,8 @@ func TestShowUsage(t *testing.T) {
 	}
 
 	// Should explain what arguments to provide
-	if !strings.Contains(output, "file") || !strings.Contains(output, ".tcx") {
-		t.Error("Expected usage to mention TCX file argument")
+	if !strings.Contains(output, "file") {
+		t.Error("Expected usage to mention file argument")
 	}
 
 	// Should contain "Usage:" header
@@ -190,9 +197,10 @@ func TestShowUsage(t *testing.T) {
 		t.Error("Expected usage to contain 'Usage:' header")
 	}
 
-	// Should have examples section (optional but nice)
-	if !strings.Contains(output, "Example") {
-		t.Log("Consider adding examples to usage message")
+	// Should mention both TCX and FIT formats
+	output = strings.ToLower(output)
+	if !strings.Contains(output, "tcx") && !strings.Contains(output, "fit") {
+		t.Log("Consider mentioning supported file formats (TCX, FIT)")
 	}
 }
 
@@ -289,5 +297,27 @@ func TestValidateArgs_HelpFlags(t *testing.T) {
 				t.Errorf("checkHelpFlag() isHelp = %v, want %v", isHelp, tt.isHelpFlag)
 			}
 		})
+	}
+}
+
+func TestRun_UnsupportedFileFormat(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+
+	exitCode := run([]string{"zone-finder", "workout.gpx"}, &stdout, &stderr)
+
+	// Should exit with error
+	if exitCode == 0 {
+		t.Error("Expected non-zero exit code for unsupported format")
+	}
+
+	// Should have error message
+	if stderr.Len() == 0 {
+		t.Error("Expected error message for unsupported format")
+	}
+
+	// Error should mention unsupported format
+	if !strings.Contains(strings.ToLower(stderr.String()), "unsupported") &&
+		!strings.Contains(strings.ToLower(stderr.String()), "format") {
+		t.Error("Expected error to mention unsupported format")
 	}
 }

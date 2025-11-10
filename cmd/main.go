@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"zone-finder/tcx"
+	"zone-finder/workoutfile"
 	"zone-finder/zones"
 )
 
@@ -49,20 +49,20 @@ func validateArgs(args []string) error {
 
 func showUsage(w io.Writer) {
 	usage := `
-Usage: zone-finder <file.tcx>
+Usage: zone-finder <file.ext>
 
-Calculate heart rate training zones from TCX workout files using the
+Calculate heart rate training zones from FIT or TCX workout files using the
 Lactate Threshold Heart Rate (LTHR) method.
 
 Arguments:
-  <file.tcx>    Path to a TCX workout file
+  <file.ext>    Path to a workout file
 
 Options:
   -h, --help    Show this help message
 
 Examples:
   zone-finder workout.tcx
-  zone-finder ~/Documents/garmin-run.tcx
+  zone-finder ~/Documents/garmin-run.fit
 
 The program analyzes the last 20 minutes of your workout to determine
 your LTHR, then calculates 5 training zones based on percentages of LTHR.
@@ -95,14 +95,14 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 		return 1
 	}
 
-	tcxFile := args[1]
-	tcxData, err := tcx.ParseTCX(tcxFile)
+	workoutFile := args[1]
+	fileData, err := workoutfile.ParseFile(workoutFile)
 	if err != nil {
 		fmt.Fprint(stderr, err)
 		return 1
 	}
 
-	hrData, err := tcxData.GetHRDataPoints()
+	hrData, err := fileData.GetHRDataPoints()
 	if err != nil {
 		fmt.Fprint(stderr, err)
 		return 1

@@ -1,4 +1,4 @@
-package workoutfile
+package types
 
 import "time"
 
