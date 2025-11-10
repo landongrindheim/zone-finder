@@ -96,13 +96,13 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 	}
 
 	workoutFile := args[1]
-	fileData, err := workoutfile.ParseFile(workoutFile)
+	workout, err := workoutfile.ParseFile(workoutFile)
 	if err != nil {
 		fmt.Fprintf(stderr, "Error parsing file: %v\n", err)
 		return 1
 	}
 
-	hrData, err := fileData.GetHRDataPoints()
+	hrData, err := workout.GetHRDataPoints()
 	if err != nil {
 		fmt.Fprintf(stderr, "Error parsing heart rate data: %v\n", err)
 		return 1
