@@ -24,7 +24,7 @@ func TestParseFile(t *testing.T) {
 		},
 		{
 			name:    "uppercase TCX extension",
-			path:    "../tcx/testdata/treadmill_run_watch.TCX",
+			path:    "../tcx/testdata/treadmill_run_watch_upcased_extension.TCX",
 			wantErr: false, // Should handle case-insensitive
 		},
 		{
