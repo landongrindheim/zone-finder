@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"zone-finder/workoutfile"
 	"zone-finder/zones"
 )
@@ -18,7 +19,7 @@ Zone 3: %v-%v
 Zone 4: %v-%v
 Zone 5: %v+
 `
-	return fmt.Sprintf(
+	return strings.TrimPrefix(fmt.Sprintf(
 		output,
 		zones.LTHR,
 		zones.Zones[0].Max,
@@ -29,7 +30,7 @@ Zone 5: %v+
 		zones.Zones[3].Min,
 		zones.Zones[3].Max,
 		zones.Zones[4].Min,
-	)
+	), "\n")
 }
 
 func main() {
