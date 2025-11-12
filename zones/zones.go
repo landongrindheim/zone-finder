@@ -20,10 +20,12 @@ type Zone struct {
 }
 
 const (
-	maxHeartRate         = 220
-	zone2Lower   float64 = 0.80
-	zone2Upper   float64 = 0.88
-	zone3Upper   float64 = 0.94
+	windowDuration                = 20 * time.Minute
+	minAcceptableDuration         = (windowDuration - 2*time.Second)
+	maxHeartRate                  = 220
+	zone2Lower            float64 = 0.80
+	zone2Upper            float64 = 0.88
+	zone3Upper            float64 = 0.94
 )
 
 func CalculateZonesFromHRData(dataPoints []types.HRDataPoint) (HeartRateZones, error) {
@@ -47,7 +49,7 @@ func sortByTimestamp(dataPoints []types.HRDataPoint) []types.HRDataPoint {
 
 func CalculateLTHR(dataPoints []types.HRDataPoint) (int, error) {
 	totalDuration := dataPoints[len(dataPoints)-1].Timestamp.Sub(dataPoints[0].Timestamp)
-	if totalDuration < 20*time.Minute {
+	if totalDuration < minAcceptableDuration {
 		return 0, errors.New("insufficient data: need at least 20 minutes")
 	}
 
@@ -97,4 +99,62 @@ func CalculateZones(lthr int) HeartRateZones {
 
 func calculateZoneBoundary(lthr int, percentage float64) int {
 	return int(math.Round(float64(lthr) * percentage))
+}
+
+// Finds the 20-minute window with the highest average heart rate
+func FindBestWindow(dataPoints []types.HRDataPoint) ([]types.HRDataPoint, error) {
+	dataPoints = sortByTimestamp(dataPoints)
+
+	var bestWindow []types.HRDataPoint
+	var bestAvg float64
+
+	if len(dataPoints) == 0 {
+		return nil, errors.New("No HR data provided")
+	}
+
+	workoutDuration := dataPoints[len(dataPoints)-1].Timestamp.Sub(dataPoints[0].Timestamp)
+	if workoutDuration < windowDuration {
+		return nil, errors.New("workout too short")
+	}
+
+	for i := 0; i < len(dataPoints); i++ {
+		startTime := dataPoints[i].Timestamp
+		endTime := startTime.Add(windowDuration)
+
+		var window []types.HRDataPoint
+		for j := i; j < len(dataPoints); j++ {
+			if !dataPoints[j].Timestamp.After(endTime) {
+				window = append(window, dataPoints[j])
+			} else {
+				break
+			}
+		}
+
+		if len(window) == 0 {
+			continue
+		}
+
+		actualDuration := window[len(window)-1].Timestamp.Sub(window[0].Timestamp)
+		if actualDuration < minAcceptableDuration {
+			// stop iterating when there's no longer 20 minutes of data left
+			break
+		}
+
+		sum := 0
+		for _, dp := range window {
+			sum += dp.HeartRate
+		}
+
+		avg := float64(sum) / float64(len(window))
+		if avg > bestAvg {
+			bestAvg = avg
+			bestWindow = window
+		}
+	}
+
+	if bestWindow == nil {
+		return nil, errors.New("Could not find valid 20-minute window")
+	}
+
+	return bestWindow, nil
 }

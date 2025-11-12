@@ -240,3 +240,157 @@ func TestCalculateZonesFromData(t *testing.T) {
 		t.Errorf("Zone 2 Max = %d, want around 150", z2.Max)
 	}
 }
+
+// Helper to create synthetic HR data
+func createHRData(startTime time.Time, hrValues []int) []types.HRDataPoint {
+	var dataPoints []types.HRDataPoint
+	for i, hr := range hrValues {
+		dataPoints = append(dataPoints, types.HRDataPoint{
+			Timestamp: startTime.Add(time.Duration(i) * time.Second),
+			HeartRate: hr,
+		})
+	}
+	return dataPoints
+}
+
+// Helper to create constant HR for duration
+func createConstantHR(startTime time.Time, hr int, seconds int) []types.HRDataPoint {
+	hrValues := make([]int, seconds)
+	for i := range hrValues {
+		hrValues[i] = hr
+	}
+	return createHRData(startTime, hrValues)
+}
+
+func TestFindBestWindow(t *testing.T) {
+	baseTime := time.Date(2025, 1, 1, 10, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name      string
+		dataSetup func() []types.HRDataPoint
+		wantLTHR  int
+		wantErr   bool
+	}{
+		{
+			name: "workout with cooldown - should avoid cooldown",
+			dataSetup: func() []types.HRDataPoint {
+				var data []types.HRDataPoint
+				// 5 min warmup at 120
+				data = append(data, createConstantHR(baseTime, 120, 5*60)...)
+				// 30 min effort at 170
+				data = append(data, createConstantHR(baseTime.Add(5*time.Minute), 170, 30*60)...)
+				// 5 min cooldown at 110
+				data = append(data, createConstantHR(baseTime.Add(35*time.Minute), 110, 5*60)...)
+				return data
+			},
+			wantLTHR: 170, // Should find the 170 effort, not include cooldown
+			wantErr:  false,
+		},
+		{
+			name: "workout with warmup - should find peak effort",
+			dataSetup: func() []types.HRDataPoint {
+				var data []types.HRDataPoint
+				// 10 min warmup at 100
+				data = append(data, createConstantHR(baseTime, 100, 10*60)...)
+				// 25 min effort at 165
+				data = append(data, createConstantHR(baseTime.Add(10*time.Minute), 165, 25*60)...)
+				return data
+			},
+			wantLTHR: 165, // Should find sustained effort
+			wantErr:  false,
+		},
+		{
+			name: "steady effort - no cooldown",
+			dataSetup: func() []types.HRDataPoint {
+				// 35 minutes at constant 168
+				return createConstantHR(baseTime, 168, 35*60)
+			},
+			wantLTHR: 168, // Any 20-min window should give same result
+			wantErr:  false,
+		},
+		{
+			name: "workout too short",
+			dataSetup: func() []types.HRDataPoint {
+				// Only 19 minutes (less than 20 required)
+				return createConstantHR(baseTime, 160, 19*60)
+			},
+			wantLTHR: 0,
+			wantErr:  true,
+		},
+		{
+			name: "progressive build - should find highest sustained",
+			dataSetup: func() []types.HRDataPoint {
+				var data []types.HRDataPoint
+				// Build from 140 to 174 over 35 minutes (1 bpm per minute)
+				for min := 0; min < 35; min++ {
+					hr := 140 + min
+					data = append(data, createConstantHR(
+						baseTime.Add(time.Duration(min)*time.Minute),
+						hr,
+						60,
+					)...)
+				}
+				return data
+			},
+			wantLTHR: 164, // Average of highest 20-min window
+			wantErr:  false,
+		},
+		{
+			name: "interval workout - should find sustained section",
+			dataSetup: func() []types.HRDataPoint {
+				var data []types.HRDataPoint
+				// 10 min warmup at 120
+				data = append(data, createConstantHR(baseTime, 120, 10*60)...)
+				// 5 x (3 min at 180, 2 min at 140) = 25 minutes
+				for i := 0; i < 5; i++ {
+					offset := baseTime.Add(time.Duration(10+i*5) * time.Minute)
+					data = append(data, createConstantHR(offset, 180, 3*60)...)
+					data = append(data, createConstantHR(offset.Add(3*time.Minute), 140, 2*60)...)
+				}
+				// 5 min cooldown at 110
+				data = append(data, createConstantHR(baseTime.Add(35*time.Minute), 110, 5*60)...)
+				return data
+			},
+			wantLTHR: 166, // 20-min window during intervals
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dataPoints := tt.dataSetup()
+
+			window, err := FindBestWindow(dataPoints)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("FindBestWindow() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr {
+				return
+			}
+
+			// Calculate LTHR from the window
+			lthr, err := CalculateLTHR(window)
+			if err != nil {
+				t.Errorf("CalculateLTHR() error = %v", err)
+				return
+			}
+
+			// Allow ±2 bpm tolerance for rounding/edge cases
+			if lthr < tt.wantLTHR-2 || lthr > tt.wantLTHR+2 {
+				t.Errorf("LTHR from best window = %d, want ~%d (±2)", lthr, tt.wantLTHR)
+			}
+
+			// Verify window is at least 20 minutes
+			if len(window) > 0 {
+				duration := window[len(window)-1].Timestamp.Sub(window[0].Timestamp)
+				desiredDuration := 20*time.Minute - 2*time.Second
+				if duration < desiredDuration {
+					t.Errorf("Window duration = %v, want >= 20 minutes", duration)
+				}
+			}
+		})
+	}
+}
