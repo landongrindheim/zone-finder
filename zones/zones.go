@@ -28,10 +28,11 @@ const (
 	zone3Upper            float64 = 0.94
 )
 
+// Calculate training zones from HR data points using LTHR method
 func CalculateZonesFromHRData(dataPoints []types.HRDataPoint) (HeartRateZones, error) {
-	sorted := sortByTimestamp(dataPoints)
+	sortByTimestamp(dataPoints)
 
-	lactateThreshold, err := CalculateLTHR(sorted)
+	lactateThreshold, err := CalculateLTHR(dataPoints)
 	if err != nil {
 		return HeartRateZones{}, err
 	}
@@ -41,12 +42,11 @@ func CalculateZonesFromHRData(dataPoints []types.HRDataPoint) (HeartRateZones, e
 	return zones, nil
 }
 
-func sortByTimestamp(dataPoints []types.HRDataPoint) []types.HRDataPoint {
+func sortByTimestamp(dataPoints []types.HRDataPoint) {
 	sort.Slice(dataPoints, func(i, j int) bool { return dataPoints[i].Timestamp.Before(dataPoints[j].Timestamp) })
-
-	return dataPoints
 }
 
+// Calculate the Lactate Threshold Heart Rate from a set of HR data points
 func CalculateLTHR(dataPoints []types.HRDataPoint) (int, error) {
 	totalDuration := dataPoints[len(dataPoints)-1].Timestamp.Sub(dataPoints[0].Timestamp)
 	if totalDuration < minAcceptableDuration {
@@ -103,18 +103,18 @@ func calculateZoneBoundary(lthr int, percentage float64) int {
 
 // Finds the 20-minute window with the highest average heart rate
 func FindBestWindow(dataPoints []types.HRDataPoint) ([]types.HRDataPoint, error) {
-	dataPoints = sortByTimestamp(dataPoints)
+	sortByTimestamp(dataPoints)
 
 	var bestWindow []types.HRDataPoint
 	var bestAvg float64
 
 	if len(dataPoints) == 0 {
-		return nil, errors.New("No HR data provided")
+		return nil, errors.New("no HR data provided")
 	}
 
 	workoutDuration := dataPoints[len(dataPoints)-1].Timestamp.Sub(dataPoints[0].Timestamp)
 	if workoutDuration < windowDuration {
-		return nil, errors.New("workout too short")
+		return nil, errors.New("workout too short: need at least 20 minutes")
 	}
 
 	for i := 0; i < len(dataPoints); i++ {
