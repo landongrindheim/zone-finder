@@ -65,4 +65,4 @@ go build -o zone-finder ./cmd
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details
