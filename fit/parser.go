@@ -67,6 +67,11 @@ func (fit *FITData) GetHRDataPoints() ([]types.HRDataPoint, error) {
 			continue
 		}
 
+		// skip invalid timestamps
+		if record.Timestamp.IsZero() || record.Timestamp.Year() < 2000 {
+			continue
+		}
+
 		dataPoints = append(dataPoints, types.HRDataPoint{
 			Timestamp: record.Timestamp,
 			HeartRate: int(record.HeartRate),
