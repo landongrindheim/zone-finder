@@ -32,10 +32,12 @@ const (
 func CalculateZonesFromHRData(dataPoints []types.HRDataPoint) (HeartRateZones, error) {
 	sortByTimestamp(dataPoints)
 
-	lactateThreshold, err := CalculateLTHR(dataPoints)
+	bestAvailableWindow, err := FindBestWindow(dataPoints)
 	if err != nil {
 		return HeartRateZones{}, err
 	}
+
+	lactateThreshold := CalculateLTHR(bestAvailableWindow)
 
 	zones := CalculateZones(lactateThreshold)
 
@@ -47,36 +49,13 @@ func sortByTimestamp(dataPoints []types.HRDataPoint) {
 }
 
 // Calculate the Lactate Threshold Heart Rate from a set of HR data points
-func CalculateLTHR(dataPoints []types.HRDataPoint) (int, error) {
-	totalDuration := dataPoints[len(dataPoints)-1].Timestamp.Sub(dataPoints[0].Timestamp)
-	if totalDuration < minAcceptableDuration {
-		return 0, errors.New("insufficient data: need at least 20 minutes")
-	}
-
-	lastTwentyMinutes := lastTwentyMinutes(dataPoints)
-
+func CalculateLTHR(dataPoints []types.HRDataPoint) int {
 	sum := 0
-	for _, dp := range lastTwentyMinutes {
+	for _, dp := range dataPoints {
 		sum += dp.HeartRate
 	}
 
-	lactateThreshold := sum / len(lastTwentyMinutes)
-	return lactateThreshold, nil
-}
-
-func lastTwentyMinutes(dataPoints []types.HRDataPoint) []types.HRDataPoint {
-	var lastDataPoints []types.HRDataPoint
-
-	lastTimestamp := dataPoints[len(dataPoints)-1].Timestamp
-	twentyMinutesPrior := lastTimestamp.Add(-20 * time.Minute)
-
-	for _, dp := range dataPoints {
-		if !dp.Timestamp.Before(twentyMinutesPrior) {
-			lastDataPoints = append(lastDataPoints, dp)
-		}
-	}
-
-	return lastDataPoints
+	return sum / len(dataPoints)
 }
 
 func CalculateZones(lthr int) HeartRateZones {

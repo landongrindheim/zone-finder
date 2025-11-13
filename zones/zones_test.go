@@ -26,58 +26,25 @@ func createConstantHR(startTime time.Time, hr int, seconds int) []types.HRDataPo
 	return createHRData(startTime, hrValues)
 }
 
-func TestLastTwentyMinutes(t *testing.T) {
-	baseTime := time.Date(2025, 10, 28, 18, 0, 0, 0, time.UTC)
-
-	// Create 40 minutes of gradually increasing HR
-	dataPoints := make([]types.HRDataPoint, 2400) // Pre-allocate
-	for i := 0; i < 2400; i++ {
-		dataPoints[i] = types.HRDataPoint{
-			Timestamp: baseTime.Add(time.Duration(i) * time.Second),
-			HeartRate: 150 + i/100,
-		}
-	}
-
-	result := lastTwentyMinutes(dataPoints)
-
-	if len(result) != 1201 {
-		t.Errorf("got %d data points, want 1201", len(result))
-	}
-
-	expectedFirstTime := baseTime.Add(19*time.Minute + 59*time.Second)
-	if !result[0].Timestamp.Equal(expectedFirstTime) {
-		t.Errorf("first timestamp = %v, want %v", result[0].Timestamp, expectedFirstTime)
-	}
-
-	expectedLastTime := baseTime.Add(39*time.Minute + 59*time.Second)
-	if !result[len(result)-1].Timestamp.Equal(expectedLastTime) {
-		t.Errorf("last timestamp = %v, want %v", result[len(result)-1].Timestamp, expectedLastTime)
-	}
-}
-
 func TestCalculateLTHR(t *testing.T) {
 	baseTime := time.Date(2025, 10, 28, 18, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		name    string
-		data    []types.HRDataPoint
-		wantMin int
-		wantMax int
-		wantErr bool
+		name string
+		data []types.HRDataPoint
+		want int
 	}{
 		{
-			name: "30-minute workout with stable LTHR",
+			name: "constant heart rate",
+			data: createConstantHR(baseTime, 170, 20*60),
+			want: 170,
+		},
+		{
+			name: "oscillating heart rate",
 			data: func() []types.HRDataPoint {
 				var data []types.HRDataPoint
-				// 10 min warmup: 140-165
-				for i := 0; i < 600; i++ {
-					data = append(data, types.HRDataPoint{
-						Timestamp: baseTime.Add(time.Duration(i) * time.Second),
-						HeartRate: 140 + (i / 24),
-					})
-				}
-				// 20 min at 170-172
-				for i := 600; i < 1800; i++ {
+				// Oscillates 170, 171, 172 for 20 minutes
+				for i := 0; i < 1200; i++ {
 					data = append(data, types.HRDataPoint{
 						Timestamp: baseTime.Add(time.Duration(i) * time.Second),
 						HeartRate: 170 + (i % 3),
@@ -85,34 +52,43 @@ func TestCalculateLTHR(t *testing.T) {
 				}
 				return data
 			}(),
-			wantMin: 170,
-			wantMax: 172,
-			wantErr: false,
+			want: 171, // Average of 170, 171, 172
 		},
 		{
-			name: "insufficient data",
-			data: []types.HRDataPoint{
-				{Timestamp: time.Now(), HeartRate: 150},
-				{Timestamp: time.Now().Add(1 * time.Minute), HeartRate: 155},
-			},
-			wantErr: true,
+			name: "gradually increasing heart rate",
+			data: func() []types.HRDataPoint {
+				var data []types.HRDataPoint
+				// Increases from 160 to 180 over 20 minutes
+				for i := 0; i < 1200; i++ {
+					hr := 160 + (i / 60) // +1 bpm per minute
+					data = append(data, types.HRDataPoint{
+						Timestamp: baseTime.Add(time.Duration(i) * time.Second),
+						HeartRate: hr,
+					})
+				}
+				return data
+			}(),
+			want: 169, // Average of 160-179
+		},
+		{
+			name: "two distinct heart rates",
+			data: func() []types.HRDataPoint {
+				var data []types.HRDataPoint
+				// 10 minutes at 160, 10 minutes at 180
+				data = append(data, createConstantHR(baseTime, 160, 10*60)...)
+				data = append(data, createConstantHR(baseTime.Add(10*time.Minute), 180, 10*60)...)
+				return data
+			}(),
+			want: 170, // Average of 160 and 180
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			lthr, err := CalculateLTHR(tt.data)
+			got := CalculateLTHR(tt.data)
 
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("CalculateLTHR() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			if tt.wantErr {
-				return
-			}
-
-			if lthr < tt.wantMin || lthr > tt.wantMax {
-				t.Errorf("CalculateLTHR() = %d, want between %d-%d", lthr, tt.wantMin, tt.wantMax)
+			if got != tt.want {
+				t.Errorf("CalculateLTHR() = %d, want %d", got, tt.want)
 			}
 		})
 	}
@@ -303,10 +279,7 @@ func TestFindBestWindow(t *testing.T) {
 				return
 			}
 
-			lthr, err := CalculateLTHR(window)
-			if err != nil {
-				t.Fatalf("CalculateLTHR() error = %v", err)
-			}
+			lthr := CalculateLTHR(window)
 
 			if lthr < tt.wantLTHR-2 || lthr > tt.wantLTHR+2 {
 				t.Errorf("LTHR = %d, want ~%d (±2)", lthr, tt.wantLTHR)
